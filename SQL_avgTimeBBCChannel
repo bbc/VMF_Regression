@@ -1,0 +1,25 @@
+SELECT INDIVIDUAL_ID,
+       STREAM_LABEL,
+       AVG(SUM_DURATION_SEC) AS AVG_DURATION_SEC
+  FROM (
+           SELECT INDIVIDUAl_ID,
+                  WEEK,
+                  STREAM_LABEL,
+                  sum(CAST ( (JulianDay([END]) - JulianDay(START) ) * 24 * 60 * 60 AS INTEGER) ) AS SUM_DURATION_SEC
+             FROM audienceData12Weeks
+            WHERE DATA_TYPE NOT LIKE 'APP' AND 
+                  INDIVIDUAL_ID NOT LIKE '%DIA%' AND 
+                  (STREAM_LABEL LIKE 'BBC1%%' OR 
+                   STREAM_LABEL LIKE 'BBC2%' OR 
+                   STREAM_LABEL LIKE 'BBC4%' OR 
+                   STREAM_LABEL LIKE 'BBC Alba%' OR 
+                   STREAM_LABEL LIKE 'BBC News%' OR 
+                   STREAM_LABEL LIKE 'CBeebies%' OR 
+                   STREAM_LABEL LIKE 'BBC Parliament%' OR 
+                   STREAM_LABEL LIKE 'CBBC%') 
+            GROUP BY INDIVIDUAl_ID,
+                     WEEK,
+                     STREAM_LABEL
+       )
+ GROUP BY INDIVIDUAl_ID,
+          STREAM_LABEL
