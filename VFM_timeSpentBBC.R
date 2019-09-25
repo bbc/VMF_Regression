@@ -47,12 +47,16 @@ for(row in 2:numRows){
   if(row == numRows-numRemoved){break}
 }
 
+### In percentage format
 timeSpentPer<- timeSpent %>%
   group_by(INDIVIDUAL_ID) %>%
   mutate(total = sum(AVG_DURATION_SEC))%>%
   mutate(durationPerc = round(100*AVG_DURATION_SEC/total,1))%>%
   select(-AVG_DURATION_SEC, -total)%>%
   spread(STREAM_LABEL, durationPerc, fill = 0)
+
+## In raw seconds format
+timeSpentRaw<- timeSpent %>%spread(STREAM_LABEL, AVG_DURATION_SEC , fill = 0)
 
 #### bring in value for money data from sqlite database
 dbPath <- ("D:\\Projects\\CMMData.db")
@@ -62,12 +66,13 @@ dbDisconnect(con)
 
 
 ### Join percentage usage of each channel with VMF
-timeSpentVFM<-left_join(vfm, timeSpentPer, by = "INDIVIDUAL_ID")
+timeSpentPerVFM<-left_join(vfm, timeSpentPer, by = "INDIVIDUAL_ID")
+timeSpentRawVFM<-left_join(vfm, timeSpentRaw, by = "INDIVIDUAL_ID")
 
 
 ## Some people have no BBC TV recorded
 ## List these people
-IDs_noBBC <- view(timeSpentVFM %>%filter(is.na(ALBA))%>% select(INDIVIDUAL_ID))
+IDs_noBBC <- timeSpentRawVFM %>%filter(is.na(ALBA))%>% select(INDIVIDUAL_ID)
 
 ## Join to the activity file
 dbPath <- ("D:\\Projects\\CMMData.db")
@@ -85,8 +90,13 @@ userActivityLevel <- behaviour_noBBC %>%
 
 ## list people on IDs_noBBC but not on userActivityLevel list - these will be removed.
 removeIDs<- anti_join(IDs_noBBC, userActivityLevel, by = "INDIVIDUAL_ID")
-## remove people from timeSpentVFM
-timeSpentVFM<- anti_join(timeSpentVFM,removeIDs, by = "INDIVIDUAL_ID")
-timeSpentVFM[is.na(timeSpentVFM)]<-0
 
-write.csv(timeSpentVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentVFM.csv", row.names = FALSE)
+## remove people from timeSpentVFM
+timeSpentPerVFM<- anti_join(timeSpentPerVFM,removeIDs, by = "INDIVIDUAL_ID")
+timeSpentPerVFM[is.na(timeSpentPerVFM)]<-0
+
+timeSpentRawVFM<- anti_join(timeSpentRawVFM,removeIDs, by = "INDIVIDUAL_ID")
+timeSpentRawVFM[is.na(timeSpentRawVFM)]<-0
+
+write.csv(timeSpentPerVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentPerVFM.csv", row.names = FALSE)
+write.csv(timeSpentRawVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentRawVFM.csv", row.names = FALSE)
