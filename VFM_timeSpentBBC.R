@@ -100,3 +100,47 @@ timeSpentRawVFM[is.na(timeSpentRawVFM)]<-0
 
 write.csv(timeSpentPerVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentPerVFM.csv", row.names = FALSE)
 write.csv(timeSpentRawVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentRawVFM.csv", row.names = FALSE)
+
+
+### Repeat but not include people who viewed no channels and remove people who only viewed one channel.
+timeSpent
+singleUsers<-timeSpent %>% 
+  group_by(INDIVIDUAL_ID) %>% 
+  filter(length(unique(STREAM_LABEL))==1) %>%
+  select(INDIVIDUAL_ID)
+timeSpent2 <- anti_join(timeSpent, singleUsers) 
+
+
+
+timeSpent2Per<- timeSpent2 %>%
+  group_by(INDIVIDUAL_ID) %>%
+  mutate(total = sum(AVG_DURATION_SEC))%>%
+  mutate(durationPerc = round(100*AVG_DURATION_SEC/total,1))%>%
+  select(-AVG_DURATION_SEC, -total)%>%
+  spread(STREAM_LABEL, durationPerc, fill = 0)
+
+
+timeSpent2PerVFM<-inner_join(vfm, timeSpent2Per, by = "INDIVIDUAL_ID")
+write.csv(timeSpent2PerVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpent2PerVFM.csv", row.names = FALSE)                  
+
+### People who've viewed 3 or more channels
+singleUsers<-timeSpent %>% 
+  group_by(INDIVIDUAL_ID) %>% 
+  filter(length(unique(STREAM_LABEL))<3) %>%
+  select(INDIVIDUAL_ID)
+timeSpent2 <- anti_join(timeSpent, singleUsers)
+
+test<- timeSpent2 %>% group_by(INDIVIDUAL_ID) %>%mutate(num = length(unique(STREAM_LABEL)))
+
+
+
+timeSpent2Per<- timeSpent2 %>%
+  group_by(INDIVIDUAL_ID) %>%
+  mutate(total = sum(AVG_DURATION_SEC))%>%
+  mutate(durationPerc = round(100*AVG_DURATION_SEC/total,1))%>%
+  select(-AVG_DURATION_SEC, -total)%>%
+  spread(STREAM_LABEL, durationPerc, fill = 0)
+
+
+timeSpent2PerVFM<-inner_join(vfm, timeSpent2Per, by = "INDIVIDUAL_ID")
+write.csv(timeSpent2PerVFM, file = "D:\\Projects\\VMF_Regression\\data\\timeSpent2PerVFM.csv", row.names = FALSE)  
