@@ -39,7 +39,10 @@ vfm <- vfm1 %>%mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>%
   select(ID, BBC_VMF) %>% 
   distinct()
 
-
+vfmAll <- vfm1 %>%mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>% 
+  select(-INDIVIDUAL_ID) %>% 
+  filter(AGERAW <35) %>%
+  distinct()
 
 
 BBC_VFM<- inner_join(audienceBBC, vfm, by = 'ID')
@@ -93,7 +96,7 @@ online <- BBC_VFM %>% filter(TYPE == 'WEB') %>%
   group_by(ID, WEEK) %>%
   summarise(totalDur = sum(as.numeric(hms(DURATION)))) %>%
   group_by(ID) %>%
-  summarise(avgDuration = round(mean(totalDur)/(7*3600),1))
+  summarise(avgDuration = round(mean(totalDur)/(7*3600),2))
 online <- inner_join(online, vfm)
 
 radioGraph<- ggplot(data = radio, mapping = aes(x = avgDuration, y = BBC_VMF)) +
@@ -130,3 +133,48 @@ onlineGraph<-ggplot(data = online, mapping = aes(x = avgDuration, y = BBC_VMF)) 
        subtitle = "16-34", caption = "Compass: W5-8 2019")
 onlineGraph
 
+
+###########################   Box Plots ##########################
+
+summary(tv)
+
+
+ggplot(data = inner_join(tv,vfmAll%>%select(ID,GENDER)) , aes(x = as.factor(GENDER), y = avgDuration))+
+  geom_boxplot(aes(fill= as.factor(GENDER)))+
+  ylim(0,2)+
+  geom_hline(yintercept = 0.2,linetype="dashed", color = "red")+
+  geom_text(aes( 0, 0.22, label = 0.2, vjust = -1, hjust = -0.5), size = 3)+
+  theme_classic()+
+  labs(title = "BBC VFM vs. Avg Time Spent TV", x = "BBC VFM",y = "Average Hours With BBC Per Day" ,
+       subtitle = "16-34", caption = "Compass: W5-8 2019")+
+  facet_wrap(~ BBC_VMF, nrow = 1)
+
+ggplot(data = tv, aes(x = as.factor(BBC_VMF), y = avgDuration ))+
+  geom_boxplot()+
+  ylim(0,2)+
+  geom_hline(yintercept = 0.25,linetype="dashed", color = "red")+
+  geom_text(aes( 0, 0.25, label = 0.25, vjust = -1, hjust = -0.5), size = 3)+
+  theme_classic()+
+  labs(title = "BBC VFM vs. Avg Time Spent TV", x = "BBC VFM",y = "Average Hours With BBC Per Day" ,
+       subtitle = "16-34", caption = "Compass: W5-8 2019")
+
+
+ggplot(data = radio, aes(x = as.factor(BBC_VMF), y = avgDuration ))+
+  geom_boxplot()+
+  ylim(0,2)+
+  geom_hline(yintercept = 0.25,linetype="dashed", color = "red")+
+  geom_text(aes( 0, 0.25, label = 0.25, vjust = -1, hjust = -0.5), size = 3)+
+  theme_classic()+
+  labs(title = "BBC VFM vs. Avg Time Spent RADIO", x = "BBC VFM",y = "Average Hours With BBC Per Day" ,
+       subtitle = "16-34", caption = "Compass: W5-8 2019")
+
+ggplot(data = online, aes(x = as.factor(BBC_VMF), y = avgDuration ))+
+  geom_boxplot()+
+  ylim(0,0.15)+
+  geom_text(aes( 0, 0.01, label = 0.01, vjust = -1, hjust = -0.5), size = 3)+
+  geom_hline(yintercept = 0.01,linetype="dashed", color = "red")+
+  theme_classic()+
+  labs(title = "BBC VFM vs. Avg Time Spent ONLINE", x = "BBC VFM",y = "Average Hours With BBC Per Day" ,
+       subtitle = "16-34", caption = "Compass: W5-8 2019")
+  
+  
