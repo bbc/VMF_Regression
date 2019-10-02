@@ -46,6 +46,7 @@ vfmAll <- vfm1 %>%mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>%
 
 
 BBC_VFM<- inner_join(audienceBBC, vfm, by = 'ID')
+view(BBC_VFM %>% filter(ID == '1000098_1')%>%group_by(ID, WEEK))
 
 view(BBC_VFM %>% group_by(ID, WEEK) %>%
        summarise(totalDur = sum(as.numeric(hms(DURATION)))))
@@ -74,7 +75,7 @@ ggplot(data = allBBC, mapping = aes(x = avgDuration, y = BBC_VMF)) +
 write.csv(allBBC, file = "D:\\Projects\\VMF_Regression\\data\\allBBC.csv", row.names = FALSE)
 
 
-tooManyHours<- allBBC %>%filter(avgDuration> 24)
+tooManyHours<- allBBC %>%filter(avgDuration > 5)
 
 
 view(audienceBBC %>% filter(ID =='1007677_1'))
@@ -145,8 +146,8 @@ summary(tv)
 ggplot(data = inner_join(allBBC,vfmAll%>%select(ID,GENDER)) , aes(x = as.factor(GENDER), y = avgDuration))+
   geom_boxplot(aes(fill= as.factor(GENDER)))+
   ylim(0,2)+
-  geom_hline(yintercept = 0.2,linetype="dashed", color = "red")+
-  geom_text(aes( 0, 0.22, label = 0.2, vjust = -1, hjust = -0.5), size = 3)+
+  geom_hline(yintercept = 0.25,linetype="dashed", color = "red")+
+ geom_text(aes( 0, 0.25, label = 0.25, vjust = -1, hjust = -0.5), size = 3)+
   theme_classic()+
   labs(title = "BBC VFM vs. Avg Time Spent All", x = "BBC VFM",y = "Average Hours With BBC Per Day" ,
        subtitle = "16-34", caption = "Compass: W5-8 2019")+
