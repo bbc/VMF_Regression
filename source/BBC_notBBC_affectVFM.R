@@ -136,7 +136,10 @@ trimData <- function(x){
 }
 for(col in 6:ncol(BBC_VFM_AGEBANDS)){trimData(BBC_VFM_AGEBANDS[,col])}
 
-normalize(BBC_VFM_AGEBANDS, method = "standardize")
+######### Normalise the data ##############
+BBC_VFM_NORM<- as.data.frame(BBC_VFM_AGEBANDS)
+BBC_VFM_NORM[6:17] <- apply(BBC_VFM_NORM[6:17], 2, scale)
+
 
 ##############   Regression ########
 fit1 <- lm(BBC_VMF ~ 
@@ -147,14 +150,13 @@ fit1 <- lm(BBC_VMF ~
           + BBC_RADIO
           + BBC_TV
           + BBC_WEB
-          + NOT_MARKET_WEB
           + OTHER_OD_TV
           + OTHER_OD_AUDIO
           + OTHER_RADIO
           + OTHER_TV
           + OTHER_WEB
           ,
-          data = BBC_VFM_AGEBANDS,
+          data = BBC_VFM_NORM,
           weights = avgWeight)
 
 summary(fit1) # show results
