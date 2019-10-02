@@ -103,7 +103,6 @@ summary(BBC_VFM_AGEBANDS)
 
 ### Trim data
 
-
 # temp<-BBC_VFM_AGEBANDS %>% gather(key = "TYPE", value = "dailyTimeSpent_min",
 #                              BBC_OD_TV,
 #                              BBC_RADIO,
@@ -118,13 +117,26 @@ summary(BBC_VFM_AGEBANDS)
 #                              BBC_OD_RADIO)
 
 #### plots #####
-ggplot(data = BBC_VFM_AGEBANDS, mapping = aes(x = BBC_OD_RADIO)) +
-  geom_histogram(binwidth = 30)
+ggplot(data = BBC_VFM_AGEBANDS, mapping = aes(x = BBC_TV)) +
+  geom_histogram(binwidth = 10)#+
+  #scale_y_continuous(limits = c(0,10))
 
 ggplot(data = temp, aes(y = dailyTimeSpent_min, x = TYPE))+
   geom_boxplot()+
   facet_wrap(~ TYPE, nrow = 1, scales = "free" )
 
+
+### trim the data to set anything above the 95th percentile to the 95th percentile value ###
+BBC_VFM_AGEBANDS<- as.data.frame(BBC_VFM_AGEBANDS)
+
+trimData <- function(x){
+  topLimit <- quantile( x, c(0.95 ))
+  print(topLimit)
+  x[ x < topLimit ] <- topLimit
+}
+for(col in 6:ncol(BBC_VFM_AGEBANDS)){trimData(BBC_VFM_AGEBANDS[,col])}
+
+normalize(BBC_VFM_AGEBANDS, method = "standardize")
 
 ##############   Regression ########
 fit1 <- lm(BBC_VMF ~ 
