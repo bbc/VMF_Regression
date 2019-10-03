@@ -226,7 +226,7 @@ AIC(lmModel)
 
 vfmPrediction<- predict(lmModel, testData)### predict the VFM on the test data
 
-### predict the VFM and compare to known
+### predict the VFM and compare to known ####
 vfmPredictActual<- data.frame(cbind(actuals=testData$BBC_VMF, predicteds = vfmPrediction)) ## actual VFM and that predicted in one df
 
 correlation_accuracy <- cor(vfmPredictActual)  ## correlation
@@ -268,3 +268,119 @@ cvResults <- suppressWarnings(CVlm( data = BBC_VFM_NORM,
                                     main="Small symbols are predicted values while bigger ones are actuals."))  # performs the CV
 attr(cvResults, 'ms') 
 
+
+###### looking for correlated values ####
+ggplot(data = BBC_VFM_NORM, mapping = aes(x = BBC_TV, y = BBC_RADIO))+
+  geom_point()
+
+pairs(~ BBC_TV+ BBC_RADIO +BBC_WEB + BBC_OD_TV + BBC_OD_RADIO, 
+      data = BBC_VFM_AGEBANDS
+      )
+
+library(hexbin)
+
+plot( hexbin(BBC_VFM_AGEBANDS$BBC_RADIO, BBC_VFM_AGEBANDS$OTHER_RADIO, xbins = 50),
+      main="Hexagonal Binning" )
+
+
+############## LM with split by gender ######################
+
+trainingDataMEN<- trainingData %>% filter(GENDER ==1)
+testDataMEN<- testData %>% filter(GENDER ==1)
+
+lmModelMen<- lm(BBC_VMF ~ 
+                   AGEGROUP
+                 + BBC_RADIO
+                 + BBC_TV
+                 + BBC_WEB
+                 + OTHER_OD_TV
+                 + OTHER_TV
+                 ,
+                 data = trainingDataMEN,
+                 weights = avgWeight
+)
+summary(lmModelMen)
+prediction<- predict(lmModelMen, testDataMEN)
+predictActual<- data.frame(cbind(actuals=testDataMEN$BBC_VMF, predicteds = prediction))
+cor(predictActual)
+
+ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
+
+##########
+trainingDataWOMEN<- trainingData %>% filter(GENDER ==2)
+testDataWOMEN<- testData %>% filter(GENDER ==2)
+
+lmModelWomen<- lm(BBC_VMF ~ 
+                  AGEGROUP
+                + BBC_RADIO
+                + BBC_TV
+                + BBC_WEB
+                + OTHER_OD_TV
+                + OTHER_TV
+                ,
+                data = trainingDataWOMEN,
+                weights = avgWeight
+)
+summary(lmModelWomen)
+prediction<- predict(lmModelWomen, testDataWOMEN)
+predictActual<- data.frame(cbind(actuals=testDataWOMEN$BBC_VMF, predicteds = prediction))
+cor(predictActual)
+
+ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
+
+####################  AGE SPLITS ###############
+
+trainingDataAGE<- trainingData %>% filter(AGEGROUP == '65+')
+testDataAGE<- testData %>% filter(AGEGROUP == '65+')
+
+lmModelAGE<- lm(BBC_VMF ~ 
+                    GENDER
+                  + BBC_RADIO
+                  + BBC_TV
+                  + BBC_WEB
+                  + OTHER_OD_TV
+                  + OTHER_TV
+                  ,
+                  data = trainingDataAGE,
+                  weights = avgWeight
+)
+summary(lmModelAGE)
+prediction<- predict(lmModelAGE, testDataAGE)
+predictActual<- data.frame(cbind(actuals=testDataAGE$BBC_VMF, predicteds = prediction))
+cor(predictActual)
+
+ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
+
+
+############## LM with percentage time ######################
+percTimeSpent<- tempTimeSpent %>% 
+  mutate(percTime_min = 100*dailyTimeSpent_min/(total_hrs*60)) %>%
+  select(-dailyTimeSpent_min) %>%
+  spread(TYPE, percTime_min)
+
+
+trainingDataPerc<- percTimeSpent[trainingRows,]
+testDataPerc<- percTimeSpent[-trainingRows,]
+
+lmModelPerc<- lm(BBC_VMF ~ 
+               AGEGROUP
+             + GENDER
+             + BBC_RADIO
+             + BBC_TV
+             + BBC_WEB
+             + OTHER_OD_TV
+             + OTHER_TV
+             ,
+             data = trainingDataPerc,
+             weights = avgWeight
+)
+summary(lmModelPerc)
+percPrediction<- predict(lmModelPerc, testDataPerc)
+percPredictActual<- data.frame(cbind(actuals=testDataPerc$BBC_VMF, predicteds = percPrediction))
+cor(percPredictActual)
+
+ggplot(data = percPredictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
