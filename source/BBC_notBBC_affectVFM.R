@@ -52,7 +52,7 @@ vfmAll <- vfm1 %>%mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>%
 ## only select people in the metadata
 audienceBBC <- inner_join(vfmAll %>%select(ID),audienceBBC,  by = 'ID' )
 
-## label each even with the data type e.g BBC_RADIO
+## label each event with the data type e.g BBC_RADIO
 audienceBBC_labelled<- inner_join(audienceBBC, streamLabels, by = c('STREAM_LABEL' = 'STREAM_LABEL', 'DATA_TYPE'='DATA_TYPE') )
 
 now()
@@ -85,6 +85,7 @@ bbcSplit<- bbcSplit %>%
          +OTHER_TV
          +OTHER_WEB)/60)
 
+now()
 
 ## join with metadata and weight
 BBC_VFM<- inner_join(vfmAll, bbcSplit, by = 'ID') %>% select(4,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16)
@@ -101,27 +102,25 @@ write.csv(BBC_VFM_AGEBANDS, "D:\\Projects\\VMF_Regression\\data\\BBC_VFM.csv",ro
 summary(BBC_VFM_AGEBANDS)
 
 
-### Trim data
-
-# temp<-BBC_VFM_AGEBANDS %>% gather(key = "TYPE", value = "dailyTimeSpent_min",
-#                              BBC_OD_TV,
-#                              BBC_RADIO,
-#                              BBC_TV,
-#                              BBC_WEB,
-#                              NOT_MARKET_WEB,
-#                              OTHER_OD_TV,
-#                              OTHER_OD_AUDIO,
-#                              OTHER_RADIO,
-#                              OTHER_TV,
-#                              OTHER_WEB,
-#                              BBC_OD_RADIO)
+tempTimeSpent<-BBC_VFM_AGEBANDS %>% gather(key = "TYPE", value = "dailyTimeSpent_min",
+                             BBC_OD_TV,
+                             BBC_RADIO,
+                             BBC_TV,
+                             BBC_WEB,
+                             NOT_MARKET_WEB,
+                             OTHER_OD_TV,
+                             OTHER_OD_AUDIO,
+                             OTHER_RADIO,
+                             OTHER_TV,
+                             OTHER_WEB,
+                             BBC_OD_RADIO)
 
 #### plots #####
 ggplot(data = BBC_VFM_AGEBANDS, mapping = aes(x = BBC_TV)) +
   geom_histogram(binwidth = 10)#+
   #scale_y_continuous(limits = c(0,10))
 
-ggplot(data = temp, aes(y = dailyTimeSpent_min, x = TYPE))+
+ggplot(data = tempTimeSpent, aes(y = dailyTimeSpent_min, x = TYPE))+
   geom_boxplot()+
   facet_wrap(~ TYPE, nrow = 1, scales = "free" )
 
@@ -139,6 +138,24 @@ for(col in 6:ncol(BBC_VFM_AGEBANDS)){trimData(BBC_VFM_AGEBANDS[,col])}
 ######### Normalise the data ##############
 BBC_VFM_NORM<- as.data.frame(BBC_VFM_AGEBANDS)
 BBC_VFM_NORM[6:17] <- apply(BBC_VFM_NORM[6:17], 2, scale)
+
+
+#### check normalised data
+tempTimeSpentNorm<-BBC_VFM_NORM %>% gather(key = "TYPE", value = "dailyTimeSpent_min",
+                                           BBC_OD_TV,
+                                           BBC_RADIO,
+                                           BBC_TV,
+                                           BBC_WEB,
+                                           NOT_MARKET_WEB,
+                                           OTHER_OD_TV,
+                                           OTHER_OD_AUDIO,
+                                           OTHER_RADIO,
+                                           OTHER_TV,
+                                           OTHER_WEB,
+                                           BBC_OD_RADIO)
+ggplot(data = tempTimeSpentNorm, aes(y = dailyTimeSpent_min, x = TYPE))+
+  geom_boxplot()+
+  facet_wrap(~ TYPE, nrow = 1, scales = "free" )
 
 
 ##############   Regression ########
@@ -170,13 +187,35 @@ fit2 <- lm(BBC_VMF ~
            + BBC_TV
            + BBC_WEB
            # + NOT_MARKET_WEB
-           # + OTHER_OD_TV
+            + OTHER_OD_TV
            # + OTHER_OD_AUDIO
            # + OTHER_RADIO
-           # + OTHER_TV
+            + OTHER_TV
            # + OTHER_WEB
            ,
-           data = BBC_VFM_AGEBANDS)
+           data = BBC_VFM_NORM,
+           weights = avgWeight)
 
-summary(fit) # show results
-anova(fit1,fit1)
+summary(fit2) # show results
+
+
+#### Give a training set of data and a testing set
+trainingRows<- sample(1:nrow(BBC_VFM_NORM), 0.7*nrow(BBC_VFM_NORM))
+trainingData<- BBC_VFM_NORM[trainingRows,]
+testData<- BBC_VFM_NORM[-trainingRows,]
+
+### build model on training data
+lmModel<- lm(BBC_VMF ~ 
+               AGEGROUP
+             + GENDER
+             + BBC_RADIO
+             + BBC_TV
+             + BBC_WEB
+             + OTHER_OD_TV
+             + OTHER_TV
+             ,
+             data = trainingData,
+             weights = avgWeight
+             )
+
+summary(lmModel) # show results
