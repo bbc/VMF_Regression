@@ -203,7 +203,10 @@ summary(fit2) # show results
 trainingRows<- sample(1:nrow(BBC_VFM_NORM), 0.7*nrow(BBC_VFM_NORM))
 trainingData<- BBC_VFM_NORM[trainingRows,]
 testData<- BBC_VFM_NORM[-trainingRows,]
+testData$BBC_VMF[testData$BBC_VMF <1]<- 0.001 ## remove any zeros for the MAPE
 
+
+  
 ### build model on training data
 lmModel<- lm(BBC_VMF ~ 
                AGEGROUP
@@ -219,3 +222,49 @@ lmModel<- lm(BBC_VMF ~
              )
 
 summary(lmModel) # show results
+AIC(lmModel)
+
+vfmPrediction<- predict(lmModel, testData)### predict the VFM on the test data
+
+### predict the VFM and compare to known
+vfmPredictActual<- data.frame(cbind(actuals=testData$BBC_VMF, predicteds = vfmPrediction)) ## actual VFM and that predicted in one df
+
+correlation_accuracy <- cor(vfmPredictActual)  ## correlation
+
+ggplot(data = vfmPredictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
+ggplot(data = vfmPredictActual, mapping = aes(y = actuals, x = predicteds))+
+  geom_point()
+
+
+min_max_acuracy <- mean(apply(vfmPredictActual, 1, min) / apply(vfmPredictActual, 1, max)) ## min_max accuracy
+mape <- mean(abs((vfmPredictActual$predicteds - vfmPredictActual$actuals))/vfmPredictActual$actuals) ##mean absolute percentage deviation
+
+#library('DMwR')
+
+
+
+DMwR::regr.eval(vfmPredictActual$actuals, vfmPredictActual$predicteds)
+
+
+
+#### k- fold cross validation ##### using k samples to create k models and then averaging over them
+library(DAAG)
+cvResults <- suppressWarnings(CVlm( data = BBC_VFM_NORM, 
+                                    form.lm = BBC_VMF ~ 
+                                      AGEGROUP
+                                    + GENDER
+                                    + BBC_RADIO
+                                    + BBC_TV
+                                    + BBC_WEB
+                                    + OTHER_OD_TV
+                                    + OTHER_TV, 
+                                    #weights = avgWeight,
+                                    m=5, 
+                                    dots=FALSE, 
+                                    seed=29, 
+                                    legend.pos="topleft",  
+                                    printit=FALSE, 
+                                    main="Small symbols are predicted values while bigger ones are actuals."))  # performs the CV
+attr(cvResults, 'ms') 
+
