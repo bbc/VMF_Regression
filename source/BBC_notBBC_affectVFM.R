@@ -128,12 +128,31 @@ ggplot(data = tempTimeSpent, aes(y = dailyTimeSpent_min, x = TYPE))+
 ### trim the data to set anything above the 95th percentile to the 95th percentile value ###
 BBC_VFM_AGEBANDS<- as.data.frame(BBC_VFM_AGEBANDS)
 
+
 trimData <- function(x){
-  topLimit <- quantile( x, c(0.95 ))
+  topLimit <<- quantile( x, c(0.95 ))
   print(topLimit)
-  x[ x < topLimit ] <- topLimit
+  #print(x[ x > topLimit ])# <- topLimit
+  return(topLimit)
 }
-for(col in 6:ncol(BBC_VFM_AGEBANDS)){trimData(BBC_VFM_AGEBANDS[,col])}
+
+for(col in 6:ncol(BBC_VFM_AGEBANDS)){
+  print(col)
+  trimData(BBC_VFM_AGEBANDS[,col])
+  for(row in 1:nrow(BBC_VFM_AGEBANDS)){ 
+    if(BBC_VFM_AGEBANDS[row,col] > topLimit){BBC_VFM_AGEBANDS[row,col]<- topLimit}
+    }
+  }
+
+write.csv(BBC_VFM_AGEBANDS, "D:\\Projects\\VMF_Regression\\data\\BBC_VFM_trimmed.csv",row.names = FALSE)
+
+# trimData <- function(x){
+#   topLimit <- quantile( x, c(0.95 ))
+#   print(topLimit)
+#   x[ x < topLimit ] <- topLimit
+# }
+# for(col in 6:ncol(BBC_VFM_AGEBANDS)){print(col)
+#   trimData(BBC_VFM_AGEBANDS[,col])}
 
 ######### Normalise the data ##############
 BBC_VFM_NORM<- as.data.frame(BBC_VFM_AGEBANDS)
@@ -211,11 +230,16 @@ testData$BBC_VMF[testData$BBC_VMF <1]<- 0.001 ## remove any zeros for the MAPE
 lmModel<- lm(BBC_VMF ~ 
                AGEGROUP
              + GENDER
+             + BBC_OD_RADIO
+             + BBC_OD_TV
              + BBC_RADIO
              + BBC_TV
              + BBC_WEB
              + OTHER_OD_TV
+             + OTHER_OD_AUDIO
+             + OTHER_RADIO
              + OTHER_TV
+             + OTHER_WEB
              ,
              data = trainingData,
              weights = avgWeight
@@ -332,25 +356,62 @@ ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
 
 ####################  AGE SPLITS ###############
 
-trainingDataAGE<- trainingData %>% filter(AGEGROUP == '65+')
-testDataAGE<- testData %>% filter(AGEGROUP == '65+')
+trainingDataAGE<- trainingData %>% filter(AGEGROUP == '25-34')
+testDataAGE<- testData %>% filter(AGEGROUP == '16-24')
 
 lmModelAGE<- lm(BBC_VMF ~ 
-                    GENDER
-                  + BBC_RADIO
-                  + BBC_TV
-                  + BBC_WEB
-                  + OTHER_OD_TV
-                  + OTHER_TV
+                + GENDER
+                + BBC_OD_RADIO
+                + BBC_OD_TV
+                + BBC_RADIO
+                + BBC_TV
+                + BBC_WEB
+                + OTHER_OD_TV
+                + OTHER_OD_AUDIO
+                + OTHER_RADIO
+                + OTHER_TV
+                + OTHER_WEB
                   ,
                   data = trainingDataAGE,
                   weights = avgWeight
 )
 summary(lmModelAGE)
 prediction<- predict(lmModelAGE, testDataAGE)
+
 predictActual<- data.frame(cbind(actuals=testDataAGE$BBC_VMF, predicteds = prediction))
 cor(predictActual)
 
+ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
+
+####################  Light VS Heavy Users ###############
+
+trainingDataAGE<- trainingData %>% filter(AGEGROUP == '45-54')
+testDataAGE<- testData %>% filter(AGEGROUP == '45-54')
+
+lmModelAGE<- lm(BBC_VMF ~ 
+                  + GENDER
+                + BBC_OD_RADIO
+                + BBC_OD_TV
+                + BBC_RADIO
+                + BBC_TV
+                + BBC_WEB
+                + OTHER_OD_TV
+                + OTHER_OD_AUDIO
+                + OTHER_RADIO
+                + OTHER_TV
+                + OTHER_WEB
+                ,
+                data = trainingDataAGE,
+                weights = avgWeight
+)
+summary(lmModelAGE)
+prediction<- predict(lmModelAGE, testDataAGE)
+
+
+
+predictMean<- data.frame(cbind(actuals=testDataAGE$BBC_VMF, predicteds = mode(trainingDataAGE$BBC_VMF)))
+cor(predictMean) 
 ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
   geom_point()
 
@@ -384,3 +445,6 @@ cor(percPredictActual)
 
 ggplot(data = percPredictActual, mapping = aes(x = actuals, y = predicteds))+
   geom_point()
+
+
+
