@@ -55,11 +55,16 @@ vfmFinal<- inner_join(vfmAll, weightValue, by = "ID") %>%
          ) %>%
   select(-AGERAW)
 
-## only select people in the metadata
 
+## Split viewing into pillars
 pillarsData<- inner_join(audienceBBC, pillars, by = "STREAM_LABEL")
 
-numPillars<- pillarsData %>% 
+moreThan3Mins<- pillarsData %>% 
+  group_by(ID, WEEK, PILLAR, STREAM_LABEL) %>%
+  summarise(totalDuration = sum(as.numeric(hms(DURATION)))) %>%
+  filter(totalDuration > 180)
+
+numPillars<- moreThan3Mins %>% 
   select(ID, WEEK, PILLAR)%>%
   distinct() %>%
   group_by(ID, WEEK)%>%
@@ -78,6 +83,32 @@ ggplot(data= numPillarsVFM, aes(x = avgNumPillars, y = BBC_VMF)) +
 
 library(hexbin)
 h <- hexbin(numPillarsVFM$avgNumPillars, numPillarsVFM$BBC_VMF, xbins = 10)
-plot(h, colramp= function(n){heat.ob(n,beg=256,end=40)}) 
+plot(h, colramp= function(n){heat.ob(n,beg=250,end=40)}) 
 
-## there is some relationship, more platforms gives higher vfm
+## there is some relationship, more platforms gives higher vfm but its weak
+
+#### Give a training set of data and a testing set
+trainingRows<- sample(1:nrow(numPillarsVFM), 0.7*nrow(numPillarsVFM))
+trainingData<- numPillarsVFM[trainingRows,]
+testData<- numPillarsVFM[-trainingRows,]
+
+lmModel<- lm(BBC_VMF ~ 
+             + avgNumPillars,
+             data = trainingData,
+             weights = avgWeight
+)
+summary(lmModel)
+## use model to predict on training set and then view correlation
+vfmPrediction<- predict(lmModel, testData)
+vfmPredictActual<- data.frame(cbind(actuals=testData$BBC_VMF, predicteds = vfmPrediction)) ## actual VFM and that predicted in one df
+correlation_accuracy <- cor(vfmPredictActual)  ## correlation
+correlation_accuracy 
+
+
+ggplot(data = vfmPredictActual, mapping = aes(y = actuals, x = predicteds))+
+  geom_point()
+
+
+summary(numPillarsVFM$BBC_VMF)
+h1 <- hexbin(vfmPredictActual$actuals, vfmPredictActual$predicteds, xbins = 10)
+plot(h1, colramp= function(n){heat.ob(n,beg=250,end=40)}) 
