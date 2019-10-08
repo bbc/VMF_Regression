@@ -15,7 +15,7 @@ library(data.table)
 library(ggpmisc)
 
 ## read in labels recorded by compass and wether they relate to bbc or not
-pillars <- read.csv("D:\\Projects\\VMF_Regression\\Pillars.csv", header = TRUE)
+platform <- read.csv("D:\\Projects\\VMF_Regression\\PLATFORMS.csv", header = TRUE)
 
 #### bring in data from sqlite database
 dbPath <- ("D:\\Projects\\CMMData.db")
@@ -45,7 +45,11 @@ audienceBBC<- audience %>%
   select(-INDIVIDUAL_ID) %>%
   distinct()
 
-vfmAll <- vfm1 %>%mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>% 
+numWeeksAudience <- audienceBBC %>% 
+  group_by(ID)%>% 
+  summarise(numWeeksTotal = length(unique(as.character(WEEK))))
+
+  vfmAll <- vfm1 %>%mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>% 
   select(-INDIVIDUAL_ID, -SKY_VMF, -VIRGIN_VMF) %>%
   distinct()
 
@@ -56,44 +60,52 @@ vfmFinal<- inner_join(vfmAll, weightValue, by = "ID") %>%
   select(-AGERAW)
 
 
-## Split viewing into pillars
-pillarsData<- inner_join(audienceBBC, pillars, by = "STREAM_LABEL")
-
-moreThan3Mins<- pillarsData %>% 
-  group_by(ID, WEEK, PILLAR, STREAM_LABEL) %>%
+## Split viewing into platform
+platformData<- inner_join(audienceBBC, platform, by = "STREAM_LABEL")
+moreThan3Mins<- platformData %>% 
+  group_by(ID, WEEK, PLATFORM, STREAM_LABEL) %>%
   summarise(totalDuration = sum(as.numeric(hms(DURATION)))) %>%
   filter(totalDuration > 180)
 
-numPillars<- moreThan3Mins %>% 
-  select(ID, WEEK, PILLAR)%>%
+temp<-moreThan3Mins %>% 
+  select(ID, WEEK, PLATFORM)%>%
   distinct() %>%
   group_by(ID, WEEK)%>%
-  mutate(numPillars = length(unique(PILLAR)))%>%
-  select(-PILLAR) %>%
+  mutate(numPlatform = length(unique(PLATFORM)))
+
+view(temp%>% filter(numPlatform >5 ))
+
+
+numPlatform<- moreThan3Mins %>% 
+  select(ID, WEEK, PLATFORM)%>%
+  distinct() %>%
+  group_by(ID, WEEK)%>%
+  mutate(numPlatform = length(unique(PLATFORM)))%>%
+  select(-PLATFORM) %>%
   distinct() %>%
   group_by(ID)%>%
-  mutate(avgNumPillars = mean(numPillars)) %>%
-  select(ID, avgNumPillars) %>%
+  mutate(avgNumPlatform = mean(numPlatform)) %>%
+  select(ID, avgNumPlatform) %>%
   distinct()
 
-numPillarsVFM<- inner_join(numPillars, vfmFinal, by = "ID")
+numPlatformVFM<- inner_join(numPlatform, vfmFinal, by = "ID")
 
-ggplot(data= numPillarsVFM, aes(x = avgNumPillars, y = BBC_VMF)) +
+ggplot(data= numPlatformVFM, aes(x = avgNumPlatform, y = BBC_VMF)) +
   geom_point()
 
 library(hexbin)
-h <- hexbin(numPillarsVFM$avgNumPillars, numPillarsVFM$BBC_VMF, xbins = 10)
+h <- hexbin(numPlatformVFM$avgNumPlatform, numPlatformVFM$BBC_VMF, xbins = 10)
 plot(h, colramp= function(n){heat.ob(n,beg=250,end=40)}) 
 
 ## there is some relationship, more platforms gives higher vfm but its weak
 
 #### Give a training set of data and a testing set
-trainingRows<- sample(1:nrow(numPillarsVFM), 0.7*nrow(numPillarsVFM))
-trainingData<- numPillarsVFM[trainingRows,]
-testData<- numPillarsVFM[-trainingRows,]
+trainingRows<- sample(1:nrow(numPlatformVFM), 0.7*nrow(numPlatformVFM))
+trainingData<- numPlatformVFM[trainingRows,]
+testData<- numPlatformVFM[-trainingRows,]
 
 lmModel<- lm(BBC_VMF ~ 
-             + avgNumPillars,
+             + avgNumPlatform,
              data = trainingData,
              weights = avgWeight
 )
@@ -105,10 +117,65 @@ correlation_accuracy <- cor(vfmPredictActual)  ## correlation
 correlation_accuracy 
 
 
-ggplot(data = vfmPredictActual, mapping = aes(y = actuals, x = predicteds))+
-  geom_point()
+#ggplot(data = vfmPredictActual, mapping = aes(y = actuals, x = predicteds))+
+#  geom_point()
 
 
-summary(numPillarsVFM$BBC_VMF)
+summary(numPlatformVFM$BBC_VMF)
+h1 <- hexbin(vfmPredictActual$actuals, vfmPredictActual$predicteds, xbins = 10)
+plot(h1, colramp= function(n){heat.ob(n,beg=250,end=40)}) 
+
+
+############## Does any one paltform promote VFM ############
+
+whichPlatforms<- moreThan3Mins %>%
+  select(ID, PLATFORM, WEEK)%>%
+  group_by(ID,PLATFORM)%>%
+  mutate(weeksOnPlatform = length(unique(WEEK))) %>%
+  group_by(ID, PLATFORM) %>%
+  select(-WEEK)%>%
+  distinct() 
+
+onEachPlatform<- inner_join(whichPlatforms, numWeeksAudience, by = "ID") 
+onEachPlatform$PLATFORM<- as.character(onEachPlatform$PLATFORM)
+
+tv<- onEachPlatform %>%
+  filter(startsWith(PLATFORM, 'BBC')| startsWith(PLATFORM, 'NEWS_TV')| startsWith(PLATFORM, 'ALBA'))%>%
+  group_by(ID, PLATFORM) %>%
+  summarise(value = round(weeksOnPlatform/numWeeksTotal,2)) %>%
+  spread(PLATFORM, value) %>%
+  mutate_all(~replace(., is.na(.), 0))
+
+
+
+platformVFM<- inner_join(tv, vfmFinal, by = "ID")
+
+#write.csv(platformVFM,"D:\\Projects\\VMF_Regression\\data\\platformVFM.csv", row.names = FALSE )
+
+
+trainingRows<- sample(1:nrow(platformVFM), 0.7*nrow(platformVFM))
+trainingData<- platformVFM[trainingRows,]
+testData<- platformVFM[-trainingRows,]
+
+
+
+
+lm <- lm(BBC_VMF ~ 
+           BBC1+
+         BBC2+
+         BBC4+
+         NEWS_TV+
+         BBCPARL+
+         ALBA, 
+         data = trainingData,
+         weights = avgWeight
+)
+summary(lm)
+
+vfmPrediction<- predict(lmModel, testData)
+vfmPredictActual<- data.frame(cbind(actuals=testData$BBC_VMF, predicteds = vfmPrediction)) ## actual VFM and that predicted in one df
+correlation_accuracy <- cor(vfmPredictActual)  ## correlation
+correlation_accuracy 
+
 h1 <- hexbin(vfmPredictActual$actuals, vfmPredictActual$predicteds, xbins = 10)
 plot(h1, colramp= function(n){heat.ob(n,beg=250,end=40)}) 
