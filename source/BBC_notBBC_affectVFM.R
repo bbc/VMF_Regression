@@ -145,6 +145,9 @@ for(col in 6:ncol(BBC_VFM_AGEBANDS)){
   }
 
 write.csv(BBC_VFM_AGEBANDS, "D:\\Projects\\VMF_Regression\\data\\BBC_VFM_trimmed.csv",row.names = FALSE)
+temp1<- BBC_VFM_AGEBANDS %>% 
+  group_by(ID) %>% 
+  mutate(TOTAL_BBC = BBC_OD_RADIO + BBC_OD_TV + BBC_RADIO + BBC_TV + BBC_WEB)
 
 # trimData <- function(x){
 #   topLimit <- quantile( x, c(0.95 ))
@@ -197,7 +200,7 @@ fit1 <- lm(BBC_VMF ~
 
 summary(fit1) # show results
 
-fit2 <- lm(BBC_VMF ~ 
+  fit2 <- lm(BBC_VMF ~ 
              AGEGROUP
            + GENDER
            # + BBC_OD_RADIO
@@ -385,11 +388,22 @@ ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
   geom_point()
 
 ####################  Light VS Heavy Users ###############
+usageLevel<- BBC_VFM_AGEBANDS %>% 
+  group_by(ID) %>% 
+  mutate(TOTAL_BBC = BBC_OD_RADIO + BBC_OD_TV + BBC_RADIO + BBC_TV + BBC_WEB)
+summary(usageLevel$TOTAL_BBC)
 
-trainingDataAGE<- trainingData %>% filter(AGEGROUP == '45-54')
-testDataAGE<- testData %>% filter(AGEGROUP == '45-54')
+usageLight <- usageLevel %>% filter(TOTAL_BBC <= 29.56)
+usageMed <- usageLevel %>% filter(TOTAL_BBC >= 29.56 & TOTAL_BBC<= 120.43)
 
-lmModelAGE<- lm(BBC_VMF ~ 
+usageNorm <- as.data.frame(usageLight)
+usageNorm[6:17] <- apply(usageNorm[6:17], 2, scale)
+
+trainingRows<- sample(1:nrow(usageNorm), 0.7*nrow(usageNorm))
+trainingData<- usageNorm[trainingRows,]
+testData<- usageNorm[-trainingRows,]
+
+lmModelUSAGE<- lm(BBC_VMF ~ 
                   + GENDER
                 + BBC_OD_RADIO
                 + BBC_OD_TV
@@ -402,13 +416,13 @@ lmModelAGE<- lm(BBC_VMF ~
                 + OTHER_TV
                 + OTHER_WEB
                 ,
-                data = trainingDataAGE,
+                data = trainingData,
                 weights = avgWeight
 )
-summary(lmModelAGE)
-prediction<- predict(lmModelAGE, testDataAGE)
+summary(lmModelUSAGE)
+prediction<- predict(lmModelUSAGE, testData)
 
-
+#######################
 
 predictMean<- data.frame(cbind(actuals=testDataAGE$BBC_VMF, predicteds = mode(trainingDataAGE$BBC_VMF)))
 cor(predictMean) 

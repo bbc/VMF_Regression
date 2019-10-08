@@ -23,7 +23,7 @@ con <- dbConnect(RSQLite::SQLite(), dbname=dbPath)
 vfm1 <- collect(tbl(con, 'panellstsVMF'))
 temp <- tbl(con, 'audienceData12Weeks_incWeb')
 audience<- collect(filter(temp, WEEK <= 8,
-                  WEEK >= 5))
+                  WEEK >= 8))
 dbDisconnect(con)
 
 audienceBBC<- audience %>% 
