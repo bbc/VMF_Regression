@@ -40,3 +40,4 @@ vignettes/*.pdf
 *.twbr
 *.twb
 \data*
+*.csv
