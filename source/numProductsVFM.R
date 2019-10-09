@@ -90,6 +90,28 @@ numPlatform<- moreThan3Mins %>%
 
 numPlatformVFM<- inner_join(numPlatform, vfmFinal, by = "ID")
 
+write.csv(numPlatformVFM, "D:\\Projects\\VMF_Regression\\data\\numPlatformVFM.csv",row.names = FALSE)
+
+
+##### spread platforms ####
+weeklyVisitsPlatforms <- moreThan3Mins %>% 
+  select(ID, WEEK, PLATFORM)%>% ## name platforms visited that week
+  distinct() %>%
+  group_by(ID, WEEK, PLATFORM)%>%
+  mutate(platformInstance = 1) %>%
+  group_by(ID,PLATFORM) %>%
+  summarise(numWeeksPlatform = length(platformInstance))%>% ##how many weeks did they visit that paltform at least once
+  inner_join(numWeeksAudience%>%filter(numWeeksTotal == 4), by = "ID") %>%
+  group_by(ID, PLATFORM)%>%
+  summarise(platformPerWeek = numWeeksPlatform/numWeeksTotal) %>% ## give the average visit per week
+  spread(PLATFORM, platformPerWeek)%>%
+  mutate_all(~replace(., is.na(.), 0))
+  
+
+
+write.csv(weeklyVisitsPlatforms, "D:\\Projects\\VMF_Regression\\data\\weeklyVisitsPlatforms.csv",row.names = FALSE)
+
+
 ggplot(data= numPlatformVFM, aes(x = avgNumPlatform, y = BBC_VMF)) +
   geom_point()
 
