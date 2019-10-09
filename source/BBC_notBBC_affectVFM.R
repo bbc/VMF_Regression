@@ -55,14 +55,13 @@ audienceBBC <- inner_join(vfmAll %>%select(ID),audienceBBC,  by = 'ID' )
 ## label each event with the data type e.g BBC_RADIO
 audienceBBC_labelled<- inner_join(audienceBBC, streamLabels, by = c('STREAM_LABEL' = 'STREAM_LABEL', 'DATA_TYPE'='DATA_TYPE') )
 
-now()
-#numDays<- audienceBBC %>%
-       #group_by(ID) %>%
-       #summarise(numDays = length(unique(as.Date(ymd_hms(audienceBBC$START))) ) )
-now()
+audienceBBC_labelled %>% filter(as.numeric(hms(DURATION)) < 180)
+
 
 ## get the average daily number of minutes per data type per person
-bbcSplit<- audienceBBC_labelled %>%
+### remove any duration under 3 minutes
+bbcSplit<- audienceBBC_labelled %>% 
+  filter(as.numeric(hms(DURATION)) > 180) %>%
   group_by(ID, WEEK,TYPE) %>%
   summarise(weeklyTimeSpent_sec = sum(as.numeric(hms(DURATION)))) %>%
   group_by(ID,TYPE)%>%
@@ -149,13 +148,7 @@ temp1<- BBC_VFM_AGEBANDS %>%
   group_by(ID) %>% 
   mutate(TOTAL_BBC = BBC_OD_RADIO + BBC_OD_TV + BBC_RADIO + BBC_TV + BBC_WEB)
 
-# trimData <- function(x){
-#   topLimit <- quantile( x, c(0.95 ))
-#   print(topLimit)
-#   x[ x < topLimit ] <- topLimit
-# }
-# for(col in 6:ncol(BBC_VFM_AGEBANDS)){print(col)
-#   trimData(BBC_VFM_AGEBANDS[,col])}
+
 
 ######### Normalise the data ##############
 BBC_VFM_NORM<- as.data.frame(BBC_VFM_AGEBANDS)
@@ -184,7 +177,7 @@ ggplot(data = tempTimeSpentNorm, aes(y = dailyTimeSpent_min, x = TYPE))+
 fit1 <- lm(BBC_VMF ~ 
             AGEGROUP
           + GENDER
-          + BBC_OD_RADIO
+          #+ BBC_OD_RADIO remove as all values are zero because 95% of data is 0 minutes
           + BBC_OD_TV
           + BBC_RADIO
           + BBC_TV
