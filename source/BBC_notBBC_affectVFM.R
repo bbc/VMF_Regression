@@ -396,7 +396,7 @@ summary(usageLevel$TOTAL_BBC)
 usageLight <- usageLevel %>% filter(TOTAL_BBC <= 29.56)
 usageMed <- usageLevel %>% filter(TOTAL_BBC >= 29.56 & TOTAL_BBC<= 120.43)
 
-usageNorm <- as.data.frame(usageLight)
+usageNorm <- as.data.frame(usageMed)
 usageNorm[6:17] <- apply(usageNorm[6:17], 2, scale)
 
 trainingRows<- sample(1:nrow(usageNorm), 0.7*nrow(usageNorm))
@@ -404,6 +404,7 @@ trainingData<- usageNorm[trainingRows,]
 testData<- usageNorm[-trainingRows,]
 
 lmModelUSAGE<- lm(BBC_VMF ~ 
+                    AGEGROUP
                   + GENDER
                 + BBC_OD_RADIO
                 + BBC_OD_TV
@@ -422,6 +423,11 @@ lmModelUSAGE<- lm(BBC_VMF ~
 summary(lmModelUSAGE)
 prediction<- predict(lmModelUSAGE, testData)
 
+predictActual<- data.frame(cbind(actuals=testData$BBC_VMF, predicteds = prediction))
+cor(predictActual)
+
+ggplot(data = predictActual, mapping = aes(x = actuals, y = predicteds))+
+  geom_point()
 #######################
 
 predictMean<- data.frame(cbind(actuals=testDataAGE$BBC_VMF, predicteds = mode(trainingDataAGE$BBC_VMF)))
