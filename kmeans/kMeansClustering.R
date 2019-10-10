@@ -70,7 +70,7 @@ summary(timeSpent[,c(2:4)])
 
 
 ### visualise results of kmeans
-cluster <- c(1:5)
+cluster <- c(1:8)
 centerDF <- data.frame(cluster, k$center)
 
 centerReshape <- gather(centerDF, channels, values, ALBA:TWO)
@@ -88,3 +88,56 @@ ggplot(data = centerReshape, aes(x = channels, y = cluster, fill = values)) +
 ##################################################################################
 
 ################### Data 2. Platform visited per week #######################
+data2 <-read.csv("D:\\Projects\\VMF_Regression\\data\\numPlatformVFM.csv",header=T)
+data3 <-read.csv("D:\\Projects\\VMF_Regression\\data\\weeklyVisitsPlatforms.csv",header=T)
+
+clusterData<- data3[,c(3:26)] 
+clusterData<- data2[,c(2,4)] 
+summary(clusterData)
+#for(row in 1:nrow(clusterData)){ if(clusterData$BBC_VMF[row] == 0){clusterData$BBC_VMF[row] = 0.0001}}
+
+######## Using the elbow plot to find a good number of clusters ####
+clusterNums <-2:20
+tries <- 100
+avg_wssCluster<- integer(length(clusterNums)) #make an empty list to hold results
+
+for(v in clusterNums){
+  wssCluster_v <- integer(tries) 
+  for(i in 1:tries){
+    k.temp <- kmeans(clusterData, centers = v) 
+    wssCluster_v[i] <- k.temp$tot.withinss 
+  }
+  avg_wssCluster[v-1] <-mean(wssCluster_v)
+}
+
+plot(clusterNums,avg_wssCluster, type="b", main="Total Within SS by Various K",
+     ylab="Average Total Within Sum of Squares",
+     xlab="Value of K")
+
+
+
+k<- kmeans.ani(clusterData, centers = 4)
+k<- kmeans(clusterData, centers = 4)
+k$centers 
+table(k$cluster)
+
+## Make a final data set with your participant's ID and them labelled in a cluster.
+finalData = cbind(data2$ID, clusterData, k$cluster)
+write.csv(finalData, file = "D:\\Projects\\VMF_Regression\\data\\numPlatformClusteredGroups.csv", row.names = FALSE)
+
+### visualise results of kmeans
+cluster <- c(1:4)
+centerDF <- data.frame(cluster, k$center)
+write.csv(centerDF, file = "D:\\Projects\\VMF_Regression\\data\\numPlatformClusteredCenters.csv", row.names = FALSE)
+centerReshape <- gather(centerDF, measure, values, ALBA:WEATHER)
+head(centerReshape)
+
+heatMapPalette <-colorRampPalette(rev(brewer.pal(8, 'Spectral')),space='Lab')## colour palette
+
+ggplot(data = centerReshape, aes(x = measure, y = cluster, fill = values)) +
+  scale_y_continuous(breaks = seq(1, 6, by = 1)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_gradientn(colours = heatMapPalette(90)) +
+  theme_classic()
+
