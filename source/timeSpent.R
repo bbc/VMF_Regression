@@ -54,7 +54,7 @@ timeSpentTV<- timeSpentTV %>%
   group_by(ID, LABEL) %>%
   summarise(avgDailyDuration_min = mean(weeklyDuration_sec)/(7*60))%>%
   spread(key = LABEL, value = avgDailyDuration_min ) %>%
-  mutate_all(~replace(., is.na(.), 0)) %>%
+  mutate_all(~replace(., is.na(.), 0.0001)) %>%
   mutate(totalDailyTime_min = ONE + TWO + FOUR +CBBC + CBEEBIES + NEWS +PARLIAMENT)
 
 write.csv(timeSpentTV, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentTV.csv", row.names = FALSE)
