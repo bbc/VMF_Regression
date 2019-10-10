@@ -13,11 +13,10 @@ library(tidyr)
 library(stringr)
 library(data.table)
 
-
+### To find the average time spent per channel for each user
 
 ## Read in and manipulate time viewing data #####
-
-timeSpent <- read.csv("D:\\Projects\\VMF_Regression\\data\\avgTimeSpentBBC.csv", header = TRUE)
+timeSpent <- read.csv("D:\\Projects\\VMF_Regression\\data\\Time Spent Channels\\avgTimeSpentBBC.csv", header = TRUE)
 timeSpent$INDIVIDUAL_ID<- as.character(timeSpent$INDIVIDUAL_ID)
 timeSpent$STREAM_LABEL<- as.character(timeSpent$STREAM_LABEL)
 
