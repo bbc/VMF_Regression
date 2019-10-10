@@ -60,7 +60,7 @@ vfmFinal<- inner_join(vfmAll, weightValue, by = "ID") %>%
   select(-AGERAW)
 
 
-## Split viewing into platform
+## Split viewing into platform with more than 3 minutes a week on each stream label
 platformData<- inner_join(audienceBBC, platform, by = "STREAM_LABEL")
 moreThan3Mins<- platformData %>% 
   group_by(ID, WEEK, PLATFORM, STREAM_LABEL) %>%
@@ -80,13 +80,21 @@ numPlatform<- moreThan3Mins %>%
   select(ID, WEEK, PLATFORM)%>%
   distinct() %>%
   group_by(ID, WEEK)%>%
-  mutate(numPlatform = length(unique(PLATFORM)))%>%
-  select(-PLATFORM) %>%
-  distinct() %>%
-  group_by(ID)%>%
-  mutate(avgNumPlatform = mean(numPlatform)) %>%
-  select(ID, avgNumPlatform) %>%
-  distinct()
+  summarise(numPlatform = length(unique(PLATFORM))) %>%
+  group_by(ID) %>%
+  summarise(avgWeeklyNumPlatforms = mean(numPlatform))
+
+# numPlatform<- moreThan3Mins %>% 
+#   select(ID, WEEK, PLATFORM)%>%
+#   distinct() %>%
+#   group_by(ID, WEEK)%>%
+#   mutate(numPlatform = length(unique(PLATFORM)))%>%
+#   select(-PLATFORM) %>%
+#   distinct() %>%
+#   group_by(ID)%>%
+#   mutate(avgNumPlatform = mean(numPlatform)) %>%
+#   select(ID, avgNumPlatform) %>%
+#   distinct()
 
 numPlatformVFM<- inner_join(numPlatform, vfmFinal, by = "ID")
 
