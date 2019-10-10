@@ -62,6 +62,7 @@ vfmFinal<- inner_join(vfmAll, weightValue, by = "ID") %>%
 
 ## Split viewing into platform with more than 3 minutes a week on each stream label
 platformData<- inner_join(audienceBBC, platform, by = "STREAM_LABEL")
+
 moreThan3Mins<- platformData %>% 
   group_by(ID, WEEK, PLATFORM, STREAM_LABEL) %>%
   summarise(totalDuration = sum(as.numeric(hms(DURATION)))) %>%
@@ -110,9 +111,7 @@ weeklyVisitsPlatforms <- moreThan3Mins %>%
   group_by(ID,PLATFORM) %>%
   summarise(numWeeksPlatform = length(platformInstance))%>% ##how many weeks did they visit that paltform at least once
   inner_join(numWeeksAudience%>%filter(numWeeksTotal == 4), by = "ID") %>%
-  group_by(ID, PLATFORM)%>%
-  summarise(platformPerWeek = numWeeksPlatform/numWeeksTotal) %>% ## give the average visit per week
-  spread(PLATFORM, platformPerWeek)%>%
+  spread(PLATFORM, numWeeksPlatform)%>%
   mutate_all(~replace(., is.na(.), 0))
   
 
