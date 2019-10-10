@@ -41,3 +41,4 @@ vignettes/*.pdf
 *.twb
 \data*
 *.csv
+kmeans/avgNumPlatformsWeeklyClusters.png
