@@ -33,6 +33,7 @@ panelistsComplete <- collect(tbl(con, 'panelistsComplete')) %>%
   select( INDIVIDUAL_ID,
           WEIGHT,
           AGERAW,
+          GENDER,
           NATION,
           REGION,
           BBC_REGIONS,
@@ -58,21 +59,24 @@ panelistsComplete <- collect(tbl(con, 'panelistsComplete')) %>%
           RELIGION, 
           SEXUAL_ORIENTATION, 
           MARITAL_STATUS, 
-          USAGE_OF_TV_SERVICES)
+          USAGE_OF_TV_SERVICES,
+          ETHNICITY)
 panelistsComplete<- panelistsComplete%>%
   filter(startsWith(panelistsComplete$INDIVIDUAL_ID, 'I') |startsWith(panelistsComplete$INDIVIDUAL_ID, 'H') )%>% 
   mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>%
-  select(-INDIVIDUAL_ID, - WEIGHT)%>% 
+  group_by(ID)%>%
+  mutate(AGE = round(mean(AGERAW),1)) %>%
+  select(-INDIVIDUAL_ID, - WEIGHT, -AGERAW)%>% 
   distinct()
 dbDisconnect(con)
 
 #panellistColNames <- t(t(colnames(panelistsComplete)))
 metadata<- inner_join(cluster %>% select(ID, cluster),
                        panelistsComplete %>% 
-                        select(ID, AGERAW, NATION, REGION, WORKING_STATUS, SOCIAL_GRADE, RELIGION, SEXUAL_ORIENTATION, MARITAL_STATUS,
+                        select(ID, AGE, GENDER, NATION, REGION, WORKING_STATUS, SOCIAL_GRADE, RELIGION, SEXUAL_ORIENTATION, ETHNICITY,
                                IMPRESSION_BBC, IMPRESSION_ITV, IMPRESSION_CHANNEL_4, IMPRESSION_CHANNEL_5,
                                BBC_VFM, SKY_VFM, VIRGIN_VFM),
-                       by = "ID")
+                       by = "ID") %>%distinct()
 
 
 metadataColNames <- t(t(colnames(metadata))) ##create a list of the column names in metadata
@@ -91,6 +95,128 @@ for(x in 4:ncol(metadata)){
   colnames(metadata)[ncol(metadata)]<- metadataColNames[x]
   metadata <- metadata %>% select(-CODE)
 }
+metadata$IMPRESSION_BBC <- as.integer(as.character(metadata$IMPRESSION_BBC))
+metadata$IMPRESSION_ITV <- as.integer(as.character(metadata$IMPRESSION_ITV))
+metadata$IMPRESSION_CHANNEL_4 <- as.integer(as.character(metadata$IMPRESSION_CHANNEL_4))
+metadata$IMPRESSION_CHANNEL_5 <- as.integer(as.character(metadata$IMPRESSION_CHANNEL_5))
+metadata$BBC_VFM<- as.integer(as.character(metadata$BBC_VFM) )
+metadata$SKY_VFM<- as.integer(as.character(metadata$SKY_VFM) )
+metadata$VIRGIN_VFM<- as.integer(as.character(metadata$VIRGIN_VFM) )
+
 head(metadata)
 
 
+### compare the high VFM ranking cluster with the low one on their opinions of other channels.
+tvOpinions_highVFMcluster <- metadata %>% 
+  filter(cluster == 3) %>% 
+  select(ID, 
+         IMPRESSION_BBC, 
+         IMPRESSION_ITV, 
+         IMPRESSION_CHANNEL_4, 
+         IMPRESSION_CHANNEL_5, 
+         BBC_VFM, 
+         SKY_VFM, 
+         VIRGIN_VFM) %>% distinct()
+tvOpinions_lowVFMcluster <- metadata %>% 
+  filter(cluster == 4) %>% 
+  select(ID, 
+         IMPRESSION_BBC, 
+         IMPRESSION_ITV, 
+         IMPRESSION_CHANNEL_4, 
+         IMPRESSION_CHANNEL_5, 
+         BBC_VFM, 
+         SKY_VFM, 
+         VIRGIN_VFM)%>% distinct()
+
+
+write.csv(tvOpinions_highVFMcluster, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalysis\\tvOpinions_highVFMcluster.csv", row.names = FALSE)
+summary(tvOpinions_highVFMcluster)
+summary(tvOpinions_lowVFMcluster)
+
+
+############################### Compare the groups on their metadata ############################
+meta_highVFMcluster <- metadata %>% 
+  filter(cluster == 3) %>% 
+  select(ID, 
+         AGE,
+         NATION,
+         REGION,
+         WORKING_STATUS,
+         SOCIAL_GRADE,
+         RELIGION,
+         SEXUAL_ORIENTATION,
+         ETHNICITY
+         ) %>% distinct() 
+
+meta_lowVFMcluster <- metadata %>% 
+  filter(cluster == 4) %>% 
+  select(ID, 
+         AGE,
+         NATION,
+         REGION,
+         WORKING_STATUS,
+         SOCIAL_GRADE,
+         RELIGION,
+         SEXUAL_ORIENTATION,
+         ETHNICITY
+  ) %>% distinct()
+
+summary(meta_highVFMcluster)
+summary(meta_lowVFMcluster)
+write.csv(meta_lowVFMcluster, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalysis\\meta_lowVFMcluster.csv", row.names = FALSE)
+
+
+#### summarise meta data with proportions from each section
+colNames <- t(t(colnames(meta_highVFMcluster))) ##create a list of the column names
+
+### for high VFM group
+metaSummary_highVFMcluster<- data.frame()
+for(col in 3:ncol(meta_highVFMcluster)){
+  temp<- meta_highVFMcluster %>% 
+    group_by_at(col) %>%
+    summarise(perc = round(100*length(unique(ID))/964,1)) %>%
+    mutate(category = as.character(colNames[col]))
+  colnames(temp)[1]<- "subcategory"
+  
+  temp<- temp %>% select(3,1,2)
+  
+  metaSummary_highVFMcluster<- rbind(metaSummary_highVFMcluster, temp)
+}
+
+write.csv(metaSummary_highVFMcluster, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalysis\\metaSummary_highVFMcluster.csv", row.names = FALSE)
+
+### for low vfm group
+colNames <- t(t(colnames(meta_lowVFMcluster))) ##create a list of the column names
+metaSummary_lowVFMcluster<- data.frame()
+
+for(col in 3:ncol(meta_lowVFMcluster)){
+  temp<- meta_lowVFMcluster %>% 
+    group_by_at(col) %>%
+    summarise(perc = round(100*length(unique(ID))/852,1)) %>%
+    mutate(category = as.character(colNames[col]))
+  colnames(temp)[1]<- "subcategory"
+  
+  temp<- temp %>% select(3,1,2)
+  
+  metaSummary_lowVFMcluster<- rbind(metaSummary_lowVFMcluster, temp)
+}
+
+write.csv(metaSummary_lowVFMcluster, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalysis\\metaSummary_lowVFMcluster.csv", row.names = FALSE)
+
+ ######################   Gender Age ##############################
+
+summary(metadata %>% ### low group
+           filter(cluster == 4) %>% 
+           select(ID, 
+                  AGE,
+                  GENDER
+           ) %>% distinct()
+)
+
+summary(metadata %>% ### high group
+          filter(cluster == 3) %>% 
+          select(ID, 
+                 AGE,
+                 GENDER
+          ) %>% distinct()
+)
