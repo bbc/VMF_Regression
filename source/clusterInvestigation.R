@@ -274,3 +274,21 @@ platformComparison<- full_join(numPlatform_highVFM, numPlatform_lowVFM, by = "PL
 platformComparison
 
 write.csv(platformComparison, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalysis\\platformComparison.csv", row.names = FALSE)
+
+
+##########  Time Spent with BBC #########
+
+timeWithBBC_Total<- platformData %>% 
+  group_by(ID, WEEK, PLATFORM, STREAM_LABEL) %>%
+  mutate(touchDuration = sum(as.numeric(hms(DURATION)))) %>%
+  filter(touchDuration > 180) %>% ## only include touches of more than 3 minutes
+  group_by(ID,WEEK) %>%
+  summarise(weeklyDuration = sum(as.numeric(hms(DURATION))) )%>% ## weekly duration per person
+  inner_join(numWeeksAudience, by = "ID") %>% ## add in number of weeks in the sample /4
+  inner_join(metadata %>%select (ID, cluster), by = "ID" ) %>% ## add in cluster
+  group_by(ID)%>%
+  mutate(avgWeeklyDurationPerPerson = weeklyDuration/numWeeksTotal) %>% ## find average weekly duration
+  group_by(cluster)%>%
+  summarise(avgWeeklyDuration_min = sum(avgWeeklyDurationPerPerson)/60)## average weekly duration for the cluster
+  
+  
