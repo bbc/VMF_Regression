@@ -28,6 +28,9 @@ panelistsCodes$CODE<- as.integer(as.character(panelistsCodes$CODE))
 #### bring in panelists data from sqlite database
 dbPath <- ("D:\\Projects\\CMMData.db")
 con <- dbConnect(RSQLite::SQLite(), dbname=dbPath)
+temp <- tbl(con, 'audienceData12Weeks_incWeb')
+audience<- collect(filter(temp, WEEK <= 8,
+                          WEEK >= 5))
 panelistsComplete <- collect(tbl(con, 'panelistsComplete')) %>% 
   filter(WEEK <= 8,WEEK >= 5)%>%
   select( INDIVIDUAL_ID,
@@ -220,3 +223,54 @@ summary(metadata %>% ### high group
                  GENDER
           ) %>% distinct()
 )
+
+########### Which Platforms? ##########
+## read in labels that are split into platforms
+
+platform <- read.csv("D:\\Projects\\VMF_Regression\\PLATFORMS.csv", header = TRUE)
+
+## remove leading I or H on ID
+audienceBBC<- audience %>% 
+  filter(startsWith(audience$INDIVIDUAL_ID, 'I') |startsWith(audience$INDIVIDUAL_ID, 'H') )%>% 
+  mutate(ID = substr(INDIVIDUAL_ID, 3,11)) %>% 
+  select(-INDIVIDUAL_ID) %>%
+  distinct()
+
+
+numWeeksAudience <- audienceBBC %>% 
+  group_by(ID)%>% 
+  summarise(numWeeksTotal = length(unique(as.character(WEEK))))
+
+platformData<- inner_join(audienceBBC, platform, by = "STREAM_LABEL")
+
+moreThan3Mins<- platformData %>% 
+  group_by(ID, WEEK, PLATFORM, STREAM_LABEL) %>%
+  summarise(totalDuration = sum(as.numeric(hms(DURATION)))) %>%
+  filter(totalDuration > 180)
+
+numPlatform<- moreThan3Mins %>% 
+  select(ID, WEEK, PLATFORM)%>%
+  distinct() %>%
+  mutate(visit = 1) %>%
+  group_by(ID, PLATFORM) %>%
+  summarise(numVisits = sum(visit)) %>%
+  right_join(numWeeksAudience,  by = "ID") %>%
+  mutate(scaledNumVisits = numVisits / numWeeksTotal) %>%
+  select(ID, PLATFORM, scaledNumVisits) #%>%
+  #spread(key = PLATFORM, value = scaledNumVisits) %>%
+  #mutate_all(~replace(., is.na(.), 0))
+  
+
+numPlatform_highVFM<- inner_join(numPlatform, metadata %>% filter(cluster == 3) %>% select(ID), by = "ID") %>% 
+  group_by(PLATFORM)%>%
+  summarise(avgPercentageVisiting_highVFM = round(100*sum(scaledNumVisits)/964,0))
+
+numPlatform_lowVFM<- inner_join(numPlatform, metadata %>% filter(cluster == 4) %>% select(ID), by = "ID") %>% 
+  group_by(PLATFORM)%>%
+  summarise(avgPercentageVisiting_lowVFM = round(100*sum(scaledNumVisits)/852,0))
+
+### On average the percentage of people which visited each platform for more than 3 minutes per visit in one week
+platformComparison<- full_join(numPlatform_highVFM, numPlatform_lowVFM, by = "PLATFORM")
+platformComparison
+
+write.csv(platformComparison, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalysis\\platformComparison.csv", row.names = FALSE)
