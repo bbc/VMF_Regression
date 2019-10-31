@@ -71,6 +71,14 @@ panelistsComplete<- panelistsComplete%>%
   mutate(AGE = round(mean(AGERAW),1)) %>%
   select(-INDIVIDUAL_ID, - WEIGHT, -AGERAW)%>% 
   distinct()
+
+audienceWeight <- collect(filter(tbl(con, 'panelistsAll12WeeksWEIGHT'), 
+                                 WEEK <= 8,
+                                 WEEK >= 5)) 
+audienceWeight<- audienceWeight %>%
+  filter(startsWith(audienceWeight$INDIVIDUAL_ID, 'I') |startsWith(audienceWeight$INDIVIDUAL_ID, 'H') )%>% 
+  mutate(ID = substr(INDIVIDUAL_ID, 3,11))%>%
+  select(-INDIVIDUAL_ID)
 dbDisconnect(con)
 
 #panellistColNames <- t(t(colnames(panelistsComplete)))
@@ -278,17 +286,46 @@ write.csv(platformComparison, "D:\\Projects\\VMF_Regression\\data\\ClusterAnalys
 
 ##########  Time Spent with BBC #########
 
-timeWithBBC_Total<- platformData %>% 
+timeWithBBC_Total<- platformData[c(1:10),] %>% 
   group_by(ID, WEEK, PLATFORM, STREAM_LABEL) %>%
   mutate(touchDuration = sum(as.numeric(hms(DURATION)))) %>%
-  filter(touchDuration > 180) %>% ## only include touches of more than 3 minutes
   group_by(ID,WEEK) %>%
   summarise(weeklyDuration = sum(as.numeric(hms(DURATION))) )%>% ## weekly duration per person
   inner_join(numWeeksAudience, by = "ID") %>% ## add in number of weeks in the sample /4
-  inner_join(metadata %>%select (ID, cluster), by = "ID" ) %>% ## add in cluster
   group_by(ID)%>%
-  mutate(avgWeeklyDurationPerPerson = weeklyDuration/numWeeksTotal) %>% ## find average weekly duration
+  summarise(avgWeeklyDuration = sum(weeklyDuration)/numWeeksTotal) %>% ## find average weekly duration
+  inner_join(metadata %>%select (ID, cluster), by = "ID" ) %>% ## add in cluster
+  distinct()%>%
   group_by(cluster)%>%
-  summarise(avgWeeklyDuration_min = sum(avgWeeklyDurationPerPerson)/60)## average weekly duration for the cluster
+  summarise(avgWeeklyDurationPP_min = sum(avgWeeklyDuration)/(60* length(ID)),
+            numInCluster = length(ID))## average weekly duration for the cluster
+
+
+## find the total weight of each cluser based on the average weight of each participant
+clusterWeight<- left_join(cluster %>% select(ID, cluster),
+                          audienceWeight %>%select(ID, WEIGHT) %>%
+                            group_by(ID)%>%
+                            summarise(avgWeight = mean(WEIGHT)), by = "ID" ) %>%
+  group_by(cluster)%>%
+  summarise(clusterWeight = sum(avgWeight))
+
+platformData<- platformData %>% arrange(ID)
+platformData %>% 
+  group_by(ID, WEEK) %>%
+  summarise(weeklyDuration = sum(as.numeric(hms(DURATION))))%>% ## get total duration in a week
+  inner_join(audienceWeight, by = c("ID", "WEEK")) %>%
+  mutate(weeklyDurWeighted = weeklyDuration*WEIGHT)%>% #multiply by person's weight that week
+  inner_join(numWeeksAudience, by = "ID") %>%
+  group_by(ID)%>%
+  mutate(avgWeeklyDurWeighted_min = sum(weeklyDurWeighted)/(60*numWeeksTotal))%>% # find their weekly weighted average
+  select(ID, avgWeeklyDurWeighted_min)%>%
+  distinct()%>%
+  inner_join(metadata %>%select (ID, cluster), by = "ID" ) %>%
+  group_by(cluster) %>%
+  summarise(clusterTotalTime_min = sum(avgWeeklyDurWeighted_min))%>% # find total time for cluster
+  inner_join(clusterWeight, by = "cluster") %>%
+  group_by(cluster)%>%
+  summarise(weeklyDurPerPerson_hours = clusterTotalTime_min/(60*clusterWeight))## average time in a week per person in the cluster
   
-  
+
+
