@@ -201,10 +201,11 @@ lm <- lm(BBC_VMF ~
 )
 summary(lm)
 
-vfmPrediction<- predict(lmModel, testData)
+vfmPrediction<- predict(lm, testData)
 vfmPredictActual<- data.frame(cbind(actuals=testData$BBC_VMF, predicteds = vfmPrediction)) ## actual VFM and that predicted in one df
 correlation_accuracy <- cor(vfmPredictActual)  ## correlation
 correlation_accuracy 
 
 h1 <- hexbin(vfmPredictActual$actuals, vfmPredictActual$predicteds, xbins = 10)
 plot(h1, colramp= function(n){heat.ob(n,beg=250,end=40)}) 
+

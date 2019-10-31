@@ -50,7 +50,7 @@ avg_wssCluster<- integer(length(clusterNums)) #make an empty list to hold result
 for(v in clusterNums){
   wssCluster_v <- integer(tries) 
   for(i in 1:tries){
-    k.temp <- kmeans(timeSpent[,c(1:8)], centers = v) 
+    k.temp <- kmeans(timeSpent[,c(4:6,8)], centers = v) 
     wssCluster_v[i] <- k.temp$tot.withinss 
   }
   avg_wssCluster[v-1] <-mean(wssCluster_v)
@@ -62,25 +62,25 @@ plot(clusterNums,avg_wssCluster, type="b", main="Total Within SS by Various K",
      xlab="Value of K")
 ## Something around 4 or 5 looks the best
 
-k<- kmeans.ani(timeSpent[,c(1:8)], centers = 4)
+k<- kmeans.ani(timeSpent[,c(4:6,8)], centers = 4)
 #k<- kmeans(timeSpent[,c(2:8)], centers = 5)
 k$centers 
 table(k$cluster)
-summary(timeSpent[,c(2:4)])
+summary(timeSpent[,c(4:6,8)])
 
 
 ### visualise results of kmeans
-cluster <- c(1:8)
+cluster <- c(1:4)
 centerDF <- data.frame(cluster, k$center)
 
-centerReshape <- gather(centerDF, channels, values, ALBA:TWO)
+centerReshape <- gather(centerDF, channels, values, FOUR:ONE,TWO)
 head(centerReshape)
 
 heatMapPalette <-colorRampPalette(rev(brewer.pal(10, 'Spectral')),space='Lab')## colour palette
 
 #heatMapPalette <-colorRampPalette(rev(brewer.pal(10, 'RdYlGn')),space='Lab')## colour palette
-ggplot(data = centerReshape, aes(x = channels, y = cluster, fill = values)) +
-  scale_y_continuous(breaks = seq(1, 5, by = 1)) +
+ggplot(data = centerReshape, aes(x = cluster, y = channels, fill = values)) +
+  #scale_y_continuous(breaks = seq(1, 5, by = 1)) +
   geom_tile() +
   coord_equal() +
   scale_fill_gradientn(colours = heatMapPalette(90)) +

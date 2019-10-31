@@ -39,6 +39,8 @@ audienceBBC<- audience %>%
   select(-INDIVIDUAL_ID) %>%
   distinct()
 
+
+######################################################################################################
 ##use only TV with time of each session greater than 3 minutes
 timeSpentTV <- audienceBBC %>% 
   inner_join(streamLabels %>% filter(TYPE == 'TV'), by = "STREAM_LABEL") %>%
@@ -58,5 +60,10 @@ timeSpentTV<- timeSpentTV %>%
   mutate(totalDailyTime_min = ONE + TWO + FOUR +CBBC + CBEEBIES + NEWS +PARLIAMENT)
 
 write.csv(timeSpentTV, file = "D:\\Projects\\VMF_Regression\\data\\timeSpentTV.csv", row.names = FALSE)
-  
+
+
+################### Time spent for cluster groups  #########################################
+cluster <- read.csv("D:\\Projects\\VMF_Regression\\data\\numPlatformClusteredGroups.csv", header = TRUE)## read in which cluster people are in
+cluster <-  cluster %>% distinct()
+
   
