@@ -4,7 +4,7 @@ library(tidyr)
 library(RColorBrewer)
 library(fmsb)
 ################### Data 1. Time Spent on the TV Channels #######################
-data <-read.csv("D:\\Projects\\VMF_Regression\\data\\timeSpentTV.csv",header=T)
+data <-read.csv("D:\\Projects\\Measurement\\VMF_Regression\\data\\timeSpentTV.csv",header=T)
 #summary(data)
 
 timeSpent<- data[,c(2:9)]##only select columns needed
@@ -88,8 +88,8 @@ ggplot(data = centerReshape, aes(x = cluster, y = channels, fill = values)) +
 ##################################################################################
 
 ################### Data 2. Platform visited per week #######################
-data2 <-read.csv("D:\\Projects\\VMF_Regression\\data\\numPlatformVFM.csv",header=T)
-data3 <-read.csv("D:\\Projects\\VMF_Regression\\data\\weeklyVisitsPlatforms.csv",header=T)
+data2 <-read.csv("D:\\Projects\\Measurement\\VMF_Regression\\data\\numPlatformVFM.csv",header=T)
+data3 <-read.csv("D:\\Projects\\Measurement\\VMF_Regression\\data\\weeklyVisitsPlatforms.csv",header=T)
 
 clusterData<- data3[,c(3:26)] 
 clusterData<- data2[,c(2,4)] 
@@ -116,6 +116,7 @@ plot(clusterNums,avg_wssCluster, type="b", main="Total Within SS by Various K",
 
 
 
+
 k<- kmeans.ani(clusterData, centers = 4)
 k<- kmeans(clusterData, centers = 4)
 k$centers 
@@ -129,7 +130,7 @@ write.csv(finalData, file = "D:\\Projects\\VMF_Regression\\data\\numPlatformClus
 cluster <- c(1:4)
 centerDF <- data.frame(cluster, k$center)
 write.csv(centerDF, file = "D:\\Projects\\VMF_Regression\\data\\numPlatformClusteredCenters.csv", row.names = FALSE)
-centerReshape <- gather(centerDF, measure, values, ALBA:WEATHER)
+centerReshape <- gather(centerDF, measure, values)
 head(centerReshape)
 
 heatMapPalette <-colorRampPalette(rev(brewer.pal(8, 'Spectral')),space='Lab')## colour palette
@@ -138,6 +139,6 @@ ggplot(data = centerReshape, aes(x = measure, y = cluster, fill = values)) +
   scale_y_continuous(breaks = seq(1, 6, by = 1)) +
   geom_tile() +
   coord_equal() +
-  scale_fill_gradientn(colours = heatMapPalette(90)) +
+  scale_fill_gradiennt(colours = heatMapPalette(90)) +
   theme_classic()
 

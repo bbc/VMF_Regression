@@ -457,7 +457,26 @@ percPredictActual<- data.frame(cbind(actuals=testDataPerc$BBC_VMF, predicteds = 
 cor(percPredictActual)
 
 ggplot(data = percPredictActual, mapping = aes(x = actuals, y = predicteds))+
-  geom_point()
+  geom_point() +
+  scale_y_continuous(breaks = seq(0,10, by = 2)) +
+  coord_cartesian(ylim = c(0, 10))+
+  scale_x_continuous(breaks = seq(0,10, by = 2)) +
+  coord_cartesian(xlim = c(0, 10))+
+  xlab("Actual VFM ratings")+
+  ylab("Predicted VFM ratings")+
+  ggtitle("Linear Regression Model Prediction Vs Known Values")+
+  theme_classic()
 
+h1 <- hexbin(percPredictActual$actuals, percPredictActual$predicteds, xbins = 10)
+plot(h1, colramp= function(n){heat.ob(n,beg=220,end=40)}) 
 
-
+ggplot(data = percPredictActual, mapping = aes(x = actuals))+
+  geom_histogram(binwidth = 1, color="black", fill="light grey")+
+  scale_y_continuous(breaks = seq(0,500, by = 50)) +
+  coord_cartesian(ylim = c(0, 500))+
+  scale_x_continuous(breaks = seq(0,10, by = 1)) +
+  coord_cartesian(xlim = c(0, 10))+
+  xlab("Actual VFM ratings")+
+  ylab("Number of Participants")+
+  ggtitle("Number of Participants Rating Each Value for Money Score")+
+  theme_classic()
